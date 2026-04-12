@@ -39,6 +39,17 @@ function Pergunta($opcoes, $titulo) {
     return $opcoes[$num - 1]
 }
 
+function PegaClipboard($label) {
+    Escreve "`ncopie o $label e pressione Enter:" "Yellow"
+    Read-Host | Out-Null
+    $conteudo = Get-Clipboard -Raw
+    if (-not $conteudo) {
+        Escreve "clipboard vazio" "Red"
+        exit 1
+    }
+    return $conteudo
+}
+
 # ── PASSO 1: pasta ─────────────────────────────────────
 $destino_rel = "snippets\$pasta"
 $destino_abs = Join-Path $SNIPPETS $pasta
@@ -53,7 +64,6 @@ if ($escolha_pasta -eq "create") {
         Escreve "pasta criada: $destino_rel" "Green"
     }
 } else {
-    # lista pastas existentes dentro de snippets
     $pastas = Get-ChildItem $SNIPPETS -Recurse -Directory `
         | Where-Object { $_.FullName -notlike "*\.git*" } `
         | ForEach-Object { $_.FullName.Replace("$SNIPPETS\", "") }
@@ -72,19 +82,7 @@ if ($escolha_pasta -eq "create") {
 $escolha_readme = Pergunta @("readme", "not") "> readme?"
 
 if ($escolha_readme -eq "readme") {
-    Escreve "`ncole o conteudo do README (Enter duas vezes para terminar):" "Yellow"
-    $linhas = @()
-    $vazias = 0
-    while ($vazias -lt 2) {
-        $linha = Read-Host
-        if ($linha -eq "") {
-            $vazias++
-        } else {
-            $vazias = 0
-            $linhas += $linha
-        }
-    }
-    $conteudo_readme = $linhas -join "`n"
+    $conteudo_readme = PegaClipboard "conteudo do README.md"
     $readme_path = Join-Path $destino_abs "README.md"
     Set-Content -Path $readme_path -Value $conteudo_readme -Encoding UTF8
     Escreve "README.md criado" "Green"
@@ -119,19 +117,7 @@ switch ($escolha_tipo) {
 
     "snippet" {
         $nome_snip = Read-Host "`nnome do arquivo (ex: debounce.js)"
-        Escreve "cole o codigo (Enter duas vezes para terminar):" "Yellow"
-        $linhas = @()
-        $vazias = 0
-        while ($vazias -lt 2) {
-            $linha = Read-Host
-            if ($linha -eq "") {
-                $vazias++
-            } else {
-                $vazias = 0
-                $linhas += $linha
-            }
-        }
-        $codigo = $linhas -join "`n"
+        $codigo = PegaClipboard "codigo do snippet"
         $snip_path = Join-Path $destino_abs $nome_snip
         Set-Content -Path $snip_path -Value $codigo -Encoding UTF8
         Escreve "snippet salvo: $nome_snip" "Green"
