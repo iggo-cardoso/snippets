@@ -31,7 +31,7 @@ function Pergunta($opcoes, $titulo) {
         Write-Host "  [$($i+1)] $($opcoes[$i])"
     }
     do {
-        $entrada = Read-Host "`nescolha"
+        $entrada = $Host.UI.ReadLine()
         $num = 0
         $valido = [int]::TryParse($entrada, [ref]$num) -and $num -ge 1 -and $num -le $opcoes.Length
         if (-not $valido) { Escreve "opcao invalida, tente novamente" "Red" }
@@ -39,9 +39,26 @@ function Pergunta($opcoes, $titulo) {
     return $opcoes[$num - 1]
 }
 
+function LeInput($label) {
+    Escreve "`n$label" "Yellow"
+    $valor = $Host.UI.ReadLine()
+    $valor = $valor.Trim('"')
+    if ($valor.Length -gt 80) {
+        # limpa a linha digitada e substitui por mensagem curta
+        $linhas = [math]::Ceiling($valor.Length / $Host.UI.RawUI.WindowSize.Width)
+        for ($i = 0; $i -lt $linhas; $i++) {
+            [Console]::SetCursorPosition(0, [Console]::CursorTop - 1)
+            Write-Host (" " * $Host.UI.RawUI.WindowSize.Width) -NoNewline
+        }
+        [Console]::SetCursorPosition(0, [Console]::CursorTop)
+        Escreve "Colado com sucesso" "Green"
+    }
+    return $valor
+}
+
 function PegaClipboard($label) {
     Escreve "`ncopie o $label e pressione Enter:" "Yellow"
-    Read-Host | Out-Null
+    $Host.UI.ReadLine() | Out-Null
     $conteudo = Get-Clipboard -Raw
     if (-not $conteudo) {
         Escreve "clipboard vazio" "Red"
@@ -94,8 +111,7 @@ $escolha_tipo = Pergunta @("file", "folder", "snippet") "> o que vai adicionar?"
 switch ($escolha_tipo) {
 
     "file" {
-        $caminho = Read-Host "`ncaminho do arquivo"
-        $caminho = $caminho.Trim('"')
+        $caminho = LeInput "caminho do arquivo:"
         if (-not (Test-Path $caminho)) {
             Escreve "arquivo nao encontrado: $caminho" "Red"; exit 1
         }
@@ -105,8 +121,7 @@ switch ($escolha_tipo) {
     }
 
     "folder" {
-        $caminho = Read-Host "`ncaminho da pasta"
-        $caminho = $caminho.Trim('"')
+        $caminho = LeInput "caminho da pasta:"
         if (-not (Test-Path $caminho)) {
             Escreve "pasta nao encontrada: $caminho" "Red"; exit 1
         }
@@ -116,7 +131,7 @@ switch ($escolha_tipo) {
     }
 
     "snippet" {
-        $nome_snip = Read-Host "`nnome do arquivo (ex: debounce.js)"
+        $nome_snip = LeInput "nome do arquivo (ex: debounce.js):"
         $codigo = PegaClipboard "codigo do snippet"
         $snip_path = Join-Path $destino_abs $nome_snip
         Set-Content -Path $snip_path -Value $codigo -Encoding UTF8

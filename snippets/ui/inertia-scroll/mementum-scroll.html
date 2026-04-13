@@ -1,0 +1,573 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Momentum Scroll — Teste</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* ── A estrutura chave do momentum scroll ── */
+      html,
+      body {
+        overflow-x: hidden; /* Impede apenas rolagem horizontal indesejada */
+        /* Removemos o height: 100% e o overflow: hidden originais */
+        background: #080808;
+        color: #ede8df;
+        font-family: "Syne", sans-serif;
+        cursor: none;
+      }
+
+      /* ── Esconde a barra de rolagem nativa visualmente ── */
+      ::-webkit-scrollbar {
+        display: none; /* Chrome, Safari e Opera */
+      }
+      html {
+        scrollbar-width: none; /* Firefox */
+      }
+
+      /* Container fixo que vai ser translateY'd */
+      #scroller {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        will-change: transform; /* hint GPU */
+      }
+
+      /* Proxy invisível que dá altura à página para o scroll nativo funcionar */
+      #proxy {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1px;
+        pointer-events: none;
+      }
+
+      /* ── Cursor ── */
+      #dot {
+        position: fixed;
+        width: 5px;
+        height: 5px;
+        background: #c9a96e;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 999;
+        transform: translate(-50%, -50%);
+      }
+      #ring {
+        position: fixed;
+        width: 32px;
+        height: 32px;
+        border: 1px solid rgba(201, 169, 110, 0.5);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 998;
+        transform: translate(-50%, -50%);
+      }
+
+      /* ── Velocímetro ── */
+      #speedometer {
+        position: fixed;
+        top: 2rem;
+        right: 2.5rem;
+        z-index: 500;
+        text-align: right;
+      }
+      #speedometer .label {
+        font-size: 0.55rem;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: rgba(237, 232, 223, 0.35);
+        margin-bottom: 0.3rem;
+      }
+      #speedometer .val {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #c9a96e;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      #speedometer .unit {
+        font-size: 0.6rem;
+        letter-spacing: 0.2em;
+        color: rgba(237, 232, 223, 0.3);
+      }
+
+      /* ── Conteúdo de teste ── */
+      section {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6rem 4rem;
+        position: relative;
+        border-bottom: 1px solid rgba(237, 232, 223, 0.06);
+      }
+
+      /* Hero */
+      .s-hero {
+        flex-direction: column;
+        text-align: center;
+      }
+      .s-hero .tag {
+        font-size: 0.6rem;
+        letter-spacing: 0.45em;
+        text-transform: uppercase;
+        color: #c9a96e;
+        margin-bottom: 2rem;
+      }
+      .s-hero h1 {
+        font-family: "Cormorant Garamond", serif;
+        font-size: clamp(4rem, 12vw, 11rem);
+        font-weight: 300;
+        line-height: 0.88;
+        margin-bottom: 2rem;
+      }
+      .s-hero h1 em {
+        font-style: italic;
+        color: #e0c48a;
+      }
+      .s-hero p {
+        font-size: 0.8rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(237, 232, 223, 0.4);
+        margin-bottom: 3rem;
+      }
+
+      /* Seta animada */
+      .arrow {
+        width: 1px;
+        height: 80px;
+        background: linear-gradient(to bottom, #c9a96e, transparent);
+        margin: 0 auto;
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.4;
+          transform: scaleY(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scaleY(1.15);
+        }
+      }
+
+      /* Seções de texto */
+      .s-text {
+        gap: 8rem;
+      }
+      .s-text .num {
+        font-family: "Cormorant Garamond", serif;
+        font-size: clamp(5rem, 15vw, 14rem);
+        font-weight: 300;
+        color: rgba(201, 169, 110, 0.07);
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .s-text .body h2 {
+        font-family: "Cormorant Garamond", serif;
+        font-size: clamp(2rem, 5vw, 4.5rem);
+        font-weight: 300;
+        line-height: 1.1;
+        margin-bottom: 1.8rem;
+      }
+      .s-text .body h2 em {
+        font-style: italic;
+        color: #e0c48a;
+      }
+      .s-text .body p {
+        font-size: 0.82rem;
+        line-height: 2;
+        color: rgba(237, 232, 223, 0.45);
+        max-width: 480px;
+      }
+      .s-text .body .rule {
+        width: 36px;
+        height: 1px;
+        background: #c9a96e;
+        margin: 2rem 0;
+      }
+
+      /* Cards */
+      .s-cards {
+        flex-direction: column;
+        gap: 4rem;
+      }
+      .s-cards h2 {
+        font-family: "Cormorant Garamond", serif;
+        font-size: clamp(2rem, 5vw, 4rem);
+        font-weight: 300;
+      }
+      .s-cards h2 em {
+        font-style: italic;
+        color: #e0c48a;
+      }
+      .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: rgba(237, 232, 223, 0.07);
+        width: 100%;
+        max-width: 1200px;
+      }
+      .card {
+        background: #080808;
+        padding: 3rem 2rem;
+        transition: background 0.4s;
+      }
+      .card:hover {
+        background: rgba(201, 169, 110, 0.04);
+      }
+      .card .c-num {
+        font-family: "Cormorant Garamond", serif;
+        font-size: 3rem;
+        font-weight: 300;
+        color: rgba(201, 169, 110, 0.25);
+        display: block;
+        margin-bottom: 1rem;
+      }
+      .card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.8rem;
+      }
+      .card p {
+        font-size: 0.75rem;
+        line-height: 1.8;
+        color: rgba(237, 232, 223, 0.4);
+      }
+
+      /* Marquee */
+      .s-marquee {
+        min-height: 18vh;
+        overflow: hidden;
+        border-top: 1px solid rgba(237, 232, 223, 0.06);
+        border-bottom: 1px solid rgba(237, 232, 223, 0.06);
+      }
+      .mq-track {
+        display: flex;
+        gap: 2.5rem;
+        white-space: nowrap;
+        animation: mq 18s linear infinite;
+      }
+      .mq-track span {
+        font-family: "Cormorant Garamond", serif;
+        font-size: 1.2rem;
+        font-style: italic;
+        color: rgba(201, 169, 110, 0.4);
+        flex-shrink: 0;
+      }
+      .mq-track b {
+        color: rgba(237, 232, 223, 0.1);
+        font-weight: 300;
+        margin: 0 0.8rem;
+      }
+      @keyframes mq {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      /* CTA final */
+      .s-cta {
+        flex-direction: column;
+        text-align: center;
+        gap: 2rem;
+      }
+      .s-cta h2 {
+        font-family: "Cormorant Garamond", serif;
+        font-size: clamp(3rem, 9vw, 9rem);
+        font-weight: 300;
+        line-height: 0.9;
+      }
+      .s-cta h2 em {
+        font-style: italic;
+        color: #e0c48a;
+      }
+      .s-cta .sub {
+        font-size: 0.7rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: rgba(237, 232, 223, 0.35);
+      }
+      .btn {
+        display: inline-block;
+        background: #c9a96e;
+        color: #080808;
+        padding: 1rem 3rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        text-decoration: none;
+        margin-top: 1rem;
+      }
+
+      /* Gradiente de fundo sutil em cada seção */
+      .s1 {
+        background:
+          radial-gradient(
+            ellipse at 70% 30%,
+            rgba(40, 25, 8, 0.4),
+            transparent 60%
+          ),
+          #080808;
+      }
+      .s2 {
+        background:
+          radial-gradient(
+            ellipse at 20% 60%,
+            rgba(8, 18, 30, 0.5),
+            transparent 60%
+          ),
+          #080808;
+      }
+      .s3 {
+        background: #0a0a0a;
+      }
+      .s4 {
+        background:
+          radial-gradient(
+            ellipse at 50% 50%,
+            rgba(20, 15, 5, 0.5),
+            transparent 60%
+          ),
+          #080808;
+      }
+      .s5 {
+        background: #0a0a0a;
+      }
+      .s6 {
+        background:
+          radial-gradient(
+            circle at 50% 0%,
+            rgba(40, 28, 10, 0.4),
+            transparent 55%
+          ),
+          #080808;
+      }
+
+      @media (max-width: 768px) {
+        .s-text {
+          flex-direction: column;
+          gap: 2rem;
+          padding: 4rem 2rem;
+        }
+        .cards-grid {
+          grid-template-columns: 1fr;
+        }
+        .s-hero h1 {
+          font-size: clamp(3rem, 15vw, 6rem);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Cursor -->
+    <div id="dot"></div>
+    <div id="ring"></div>
+
+    <!-- Velocímetro de scroll -->
+    <div id="speedometer">
+      <div class="label">Velocidade</div>
+      <div class="val" id="speedVal">0</div>
+      <div class="unit">px/frame</div>
+    </div>
+
+    <!-- Proxy invisível (dá altura pra barra de scroll) -->
+    <div id="proxy"></div>
+
+    <!-- Container que recebe o translateY -->
+    <div id="scroller">
+      <!-- SEÇÃO 1 — Hero -->
+      <section class="s-hero s1">
+        <div class="tag">Momentum Scroll · Teste de Patinação</div>
+        <h1>Role a<br /><em>página</em><br />devagar.</h1>
+        <p>Solte e sinta o deslize</p>
+        <div class="arrow"></div>
+      </section>
+
+      <!-- SEÇÃO 2 — Texto com número grande -->
+      <section class="s-text s2">
+        <div class="num">01</div>
+        <div class="body">
+          <h2>O efeito<br /><em>patina</em><br />como gelo.</h2>
+          <div class="rule"></div>
+          <p>
+            A interpolação linear (lerp) entre a posição atual e o destino cria
+            uma desaceleração exponencial — quanto mais próximo do alvo, mais
+            lento fica. O resultado é a sensação de inércia, exatamente como uma
+            patinação no gelo.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 3 — Marquee -->
+      <section class="s-marquee s3">
+        <div class="mq-track">
+          <span>Momentum</span><b>·</b> <span>Inertia Scroll</span><b>·</b>
+          <span>Lerp Animation</span><b>·</b> <span>Smooth Patinação</span
+          ><b>·</b> <span>WebGL</span><b>·</b> <span>GSAP</span><b>·</b>
+          <span>Momentum</span><b>·</b> <span>Inertia Scroll</span><b>·</b>
+          <span>Lerp Animation</span><b>·</b> <span>Smooth Patinação</span
+          ><b>·</b> <span>WebGL</span><b>·</b> <span>GSAP</span><b>·</b>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 4 — Texto 2 -->
+      <section class="s-text s4">
+        <div class="num">02</div>
+        <div class="body">
+          <h2>Fator <em>lerp</em><br />controla<br />a inércia.</h2>
+          <div class="rule"></div>
+          <p>
+            Com <code style="color: #c9a96e; font-size: 0.8rem">t = 0.07</code>,
+            a posição atual percorre 7% da distância restante a cada frame. A
+            60fps isso cria um deslize natural de ~350ms. Reduza para 0.04 para
+            gelo, aumente para 0.15 para um momentum mais leve.
+          </p>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 5 — Cards -->
+      <section class="s-cards s5">
+        <h2>Como <em>configurar</em></h2>
+        <div class="cards-grid">
+          <div class="card">
+            <span class="c-num">01</span>
+            <h3>HTML / CSS</h3>
+            <p>
+              <code style="color: #c9a96e">overflow: hidden</code> no html/body.
+              Container fixo com
+              <code style="color: #c9a96e">will-change: transform</code>. Proxy
+              invisible com a altura real do conteúdo.
+            </p>
+          </div>
+          <div class="card">
+            <span class="c-num">02</span>
+            <h3>JavaScript</h3>
+            <p>
+              Escuta <code style="color: #c9a96e">window.scroll</code> para
+              obter o target. Loop com
+              <code style="color: #c9a96e">requestAnimationFrame</code>
+              aplicando lerp a cada frame.
+            </p>
+          </div>
+          <div class="card">
+            <span class="c-num">03</span>
+            <h3>Fator Lerp</h3>
+            <p>
+              <code style="color: #c9a96e">0.04</code> gelo extremo ·
+              <code style="color: #c9a96e">0.07</code> patinação ideal ·
+              <code style="color: #c9a96e">0.12</code> suave moderado ·
+              <code style="color: #c9a96e">0.25</code> momentum leve
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEÇÃO 6 — CTA Final -->
+      <section class="s-cta s6">
+        <h2>Funciona<br /><em>perfeitamente.</em></h2>
+        <div class="sub">Pronto para usar no seu projeto</div>
+        <a href="#" class="btn">Aplicar no projeto</a>
+      </section>
+    </div>
+    <!-- /scroller -->
+
+    <script>
+      // ════════════════════════════════════════════
+      // CURSOR
+      // ════════════════════════════════════════════
+      const dot = document.getElementById("dot");
+      const ring = document.getElementById("ring");
+      let mx = 0,
+        my = 0,
+        rx = 0,
+        ry = 0;
+
+      document.addEventListener("mousemove", (e) => {
+        mx = e.clientX;
+        my = e.clientY;
+        dot.style.left = mx + "px";
+        dot.style.top = my + "px";
+      });
+      (function cursorLoop() {
+        rx += (mx - rx) * 0.12;
+        ry += (my - ry) * 0.12;
+        ring.style.left = rx + "px";
+        ring.style.top = ry + "px";
+        requestAnimationFrame(cursorLoop);
+      })();
+
+      // ════════════════════════════════════════════
+      // MOMENTUM SCROLL (patinação)
+      // ════════════════════════════════════════════
+      const scroller = document.getElementById("scroller");
+      const proxy = document.getElementById("proxy");
+
+      // Mede a altura real do conteúdo e atribui ao proxy
+      function setProxyHeight() {
+        proxy.style.height = scroller.scrollHeight + "px";
+      }
+      setProxyHeight();
+      window.addEventListener("resize", setProxyHeight);
+
+      // Posições
+      let current = 0; // posição suavizada (o que o usuário vê)
+      let target = 0; // posição real do scroll nativo
+      let lastCurrent = 0;
+
+      // Escuta o scroll nativo (que o proxy habilita)
+      window.addEventListener("scroll", () => {
+        target = window.scrollY;
+      });
+
+      // lerp: interpolação linear
+      const lerp = (a, b, t) => a + (b - a) * t;
+
+      // Fator de patinação — mude aqui para ajustar o efeito:
+      //   0.04 = gelo extremo
+      //   0.07 = patinação ideal  ← ESTE VALOR
+      //   0.12 = suave moderado
+      //   0.25 = momentum leve
+      const LERP_FACTOR = 0.07;
+
+      // Velocímetro
+      const speedVal = document.getElementById("speedVal");
+
+      // Loop principal
+      (function loop() {
+        current = lerp(current, target, LERP_FACTOR);
+
+        // Aplica a translação negativa no container
+        scroller.style.transform = `translateY(${-current}px)`;
+
+        // Velocidade visual (quanto moveu neste frame)
+        const speed = Math.abs(current - lastCurrent);
+        lastCurrent = current;
+        speedVal.textContent = speed.toFixed(1);
+
+        requestAnimationFrame(loop);
+      })();
+    </script>
+  </body>
+</html>
+
